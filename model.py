@@ -4,6 +4,7 @@ import torch.utils.data
 import torch.nn as nn
 import torch
 import numpy as np
+import pandas as pd
 import sys
 
 sys.path.insert(0, './cs224u')
@@ -88,6 +89,9 @@ class TorchDeepNeuralModel(nn.Module):
             return nn.Embedding.from_pretrained(
                 embedding, freeze=freeze_embedding
             )
+        elif isinstance(embedding, pd.DataFrame): 
+            embedding = torch.FloatTensor(embedding.to_numpy())
+            return nn.Embedding.from_pretrained(embedding, freeze=freeze_embedding)
         else:
             return embedding
 
