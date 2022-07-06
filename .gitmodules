@@ -1,0 +1,3 @@
+[submodule "cs224u"]
+	path = cs224u
+	url = git@github.com:cgpotts/cs224u.git
