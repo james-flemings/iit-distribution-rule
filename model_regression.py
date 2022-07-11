@@ -81,7 +81,7 @@ class TorchLinearEmbeddingRegressionModel(nn.Module):
             return embedding
 
 
-class TorchLinearEmbedingRegression(TorchModelBase):
+class TorchLinearEmbeddingRegression(TorchModelBase):
     def __init__(self, 
                  vocab,
                  num_inputs,
