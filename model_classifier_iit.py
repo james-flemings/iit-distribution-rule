@@ -28,10 +28,10 @@ class IITModel(torch.nn.Module):
         return self.model(X)
 
     def forward(self, X):
-        base = X[:,0,:].squeeze(1).type(torch.FloatTensor).to(self.device)
-        coord_ids = X[:,1,:].squeeze(1).type(torch.FloatTensor).to(self.device)
+        base = X[:,0,:].squeeze(1).type(torch.LongTensor).to(self.device)
+        coord_ids = X[:,1,:].squeeze(1).type(torch.LongTensor).to(self.device)
         sources = X[:,2:,:].to(self.device)
-        sources = [sources[:,j,:].squeeze(1).type(torch.FloatTensor).to(self.device)
+        sources = [sources[:,j,:].squeeze(1).type(torch.LongTensor).to(self.device)
                    for j in range(sources.shape[1])]
         gets = self.id_to_coords[int(coord_ids.flatten()[0])]
         sets = copy.deepcopy(gets)
