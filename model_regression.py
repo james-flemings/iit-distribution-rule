@@ -149,5 +149,5 @@ class TorchLinearEmbeddingRegression(TorchModelBase):
         """
         Follow sklearn in using `r2_score` as the default scorer.
         """
-        preds = self.predict(X)
+        preds = np.round(self.predict(X))
         return r2_score(y, preds)

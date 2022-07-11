@@ -170,7 +170,7 @@ class TorchLinearEmbeddingRegressionIIT(TorchLinearEmbeddingRegression):
         #IIT_test = self.prep_input(base, sources, coord_ids)
         IIT_test = self.build_dataset(base, sources, coord_ids)
         IIT_preds, base_preds = self.model(IIT_test)
-        return IIT_preds, base_preds
+        return torch.round(IIT_preds), torch.round(base_preds)
 
 
 if __name__ == '__main__':
