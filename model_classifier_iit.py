@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.utils.data
-from model import TorchDeepNeuralClassifier
+from model_classifier import TorchDeepNeuralEmbeddingClassifier
 
 __author__ = "Atticus Geiger"
 __version__ = "CS224u, Stanford, Spring 2022"
@@ -96,7 +96,7 @@ class CrossEntropyLossIIT(nn.Module):
         return self.loss(preds[0], labels[: , 0]) + self.loss(preds[1], labels[:,1])
 
 
-class TorchDeepNeuralClassifierIIT(TorchDeepNeuralClassifier):
+class TorchDeepNeuralClassifierIIT(TorchDeepNeuralEmbeddingClassifier):
     def __init__(self, id_to_coords=None, **base_kwargs):
         super().__init__(**base_kwargs)
         self.loss = CrossEntropyLossIIT()
@@ -134,11 +134,8 @@ class TorchDeepNeuralClassifierIIT(TorchDeepNeuralClassifier):
             new_sources.append(seq)
         sources = [torch.stack(new_sources)]
 
-        #base = torch.FloatTensor(np.array(base))
-        #sources = [torch.FloatTensor(np.array(source)) for source in sources]
         self.input_dim = base.shape[1]
         coord_ids = torch.LongTensor(np.array(coord_ids))
-        #---------------------------------------------------
 
         if base_y is None:
             return torch.stack([base, coord_ids.unsqueeze(1).expand(-1, base.shape[1])] + sources, dim=1)

@@ -21,7 +21,7 @@ class ActivationLayer(torch.nn.Module):
         return self.activation(self.linear(x))
 
 
-class TorchDeepNeuralModel(nn.Module):
+class TorchDeepNeuralEmbeddingModel(nn.Module):
     def __init__(self,
                  vocab_size,
                  output_size,
@@ -97,7 +97,7 @@ class TorchDeepNeuralModel(nn.Module):
             return embedding
 
 
-class TorchDeepNeuralClassifier(TorchShallowNeuralClassifier):
+class TorchDeepNeuralEmbeddingClassifier(TorchShallowNeuralClassifier):
     def __init__(self,
                  vocab,
                  output_size,
@@ -152,7 +152,7 @@ class TorchDeepNeuralClassifier(TorchShallowNeuralClassifier):
         nn.Module
 
         """
-        return TorchDeepNeuralModel(self.vocab_size, self.output_size,
+        return TorchDeepNeuralEmbeddingModel(self.vocab_size, self.output_size,
                                     self.num_inputs, self.device, self.hidden_activation,
                                     self.num_layers, self.embed_dim, self.hidden_dim,
                                     self.embedding, self.freeze_embedding)
