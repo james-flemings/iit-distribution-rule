@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.utils.data
-from model import TorchDeepNeuralEmbeddingClassifier
+from model_classifier import TorchDeepNeuralEmbeddingClassifier
 
 __author__ = "Atticus Geiger"
 __version__ = "CS224u, Stanford, Spring 2022"
