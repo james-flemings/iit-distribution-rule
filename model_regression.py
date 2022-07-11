@@ -1,38 +1,23 @@
-# hacky solution to avoid adding __init__.py in cs224u
-from pyrsistent import freeze
-import torch.utils.data
-import torch.nn as nn
 import torch
+import torch.nn as nn
 import numpy as np
 import pandas as pd
-import sys
+from model_classifier import ActivationLayer
+from sklearn.metrics import r2_score
 
-sys.path.insert(0, './cs224u')
+from torch_model_base import TorchModelBase
 
-from torch_shallow_neural_classifier import TorchShallowNeuralClassifier
-
-class ActivationLayer(torch.nn.Module):
-    def __init__(self, input_dim, output_dim, device, hidden_activation):
-        super().__init__()
-        self.linear = nn.Linear(input_dim, output_dim, device=device)
-        self.activation = hidden_activation
-
-    def forward(self, x):
-        return self.activation(self.linear(x))
-
-
-class TorchDeepNeuralEmbeddingModel(nn.Module):
-    def __init__(self,
-                 vocab_size,
-                 output_size,
-                 num_inputs,
-                 device,
-                 hidden_activation,
-                 num_layers=1,
-                 embed_dim=40,
-                 hidden_dim=50,
-                 embedding=None,
-                 freeze_embedding=False):
+class TorchLinearEmbeddingRegressionModel(nn.Module):
+    def __init__(self, 
+                vocab_size,
+                num_inputs,
+                device,
+                hidden_activation,
+                num_layers=1,
+                embed_dim=40,
+                hidden_dim=50,
+                embedding=None,
+                freeze_embedding=False):
 
         super().__init__()
         self.num_layers = num_layers
@@ -42,7 +27,6 @@ class TorchDeepNeuralEmbeddingModel(nn.Module):
         self.hidden_dim = hidden_dim
 
         self.input_size = self.num_inputs * self.embed_dim
-        self.output_size = output_size
         self.device = device
         self.hidden_activation = hidden_activation
 
@@ -63,9 +47,9 @@ class TorchDeepNeuralEmbeddingModel(nn.Module):
                     self.hidden_dim, self.hidden_dim, self.device, self.hidden_activation
                 )
             ]
-        self.layers.append(
-            nn.Linear(self.hidden_dim, self.output_size, device=self.device)
-        )
+
+        self.w = nn.Parameter(torch.zeros(self.hidden_dim))
+        self.b = nn.Parameter(torch.zeros(1))
         self.model = nn.Sequential(*self.layers)
 
     def forward(self, X):
@@ -75,8 +59,9 @@ class TorchDeepNeuralEmbeddingModel(nn.Module):
             new_x.append(torch.cat(tuple(x[i]
                          for i in range(self.num_inputs))))
         new_x = torch.stack(new_x)
-        output = self.model(new_x)
-        return output
+
+        h = self.model(new_x)
+        return h.matmul(self.w) + self.b
 
     @staticmethod
     def _define_embedding(embedding, vocab_size, embed_dim, freeze_embedding):
@@ -96,62 +81,73 @@ class TorchDeepNeuralEmbeddingModel(nn.Module):
             return embedding
 
 
-class TorchDeepNeuralEmbeddingClassifier(TorchShallowNeuralClassifier):
-    def __init__(self,
+class TorchLinearEmbeddingRegression(TorchModelBase):
+    def __init__(self, 
                  vocab,
-                 output_size,
                  num_inputs,
+                 hidden_activation=nn.Tanh(),
                  num_layers=1,
+                 hidden_dim=50,
                  embed_dim=40,
-                 embedding=None, 
+                 embedding=None,
                  freeze_embedding=False,
                  **base_kwargs):
+
+        super().__init__(**base_kwargs)
         self.num_layers = num_layers
         self.vocab = vocab
         self.vocab_size = len(self.vocab)
         self.embed_dim = embed_dim
         self.num_inputs = num_inputs
+        self.hidden_activation = hidden_activation
+        self.hidden_dim = hidden_dim
 
-        super().__init__(**base_kwargs)
-        self.loss = nn.CrossEntropyLoss(reduction="mean")
-        self.params += ['num_layers']
-        self.output_size = output_size
-
+        self.loss = nn.MSELoss(reduction="mean")
         self.embedding = embedding
         self.freeze_embedding = freeze_embedding
 
+    def build_graph(self):
+        return TorchLinearEmbeddingRegressionModel(self.vocab_size, self.num_inputs, 
+                                        self.device, self.hidden_activation,
+                                        self.num_layers, self.embed_dim, self.hidden_dim,
+                                        self.embedding, self.freeze_embedding)
 
     def build_dataset(self, X, y=None):
+        """
+        This function will be used in training (when there is a `y`)
+        and in prediction (no `y`). For both cases, we rely on a
+        `TensorDataset`.
+
+        X = torch.FloatTensor(X)
+        self.input_dim = X.shape[1]
+        """
         new_X = []
         index = dict(zip(self.vocab, range(self.vocab_size)))
         for ex in X:
             seq = [index[w] for w in ex]
             seq = torch.tensor(seq)
             new_X.append(seq)
-
         X = torch.stack(new_X)
-
+        
         if y is None:
             dataset = torch.utils.data.TensorDataset(X)
         else:
-            self.classes_ = sorted(set(y))
-            self.n_classes_ = len(self.classes_)
-            class2index = dict(zip(self.classes_, range(self.n_classes_)))
-            y = [class2index[label] for label in y]
-            y = torch.tensor(y)
+            y = torch.FloatTensor(y)
             dataset = torch.utils.data.TensorDataset(X, y)
         return dataset
 
-    def build_graph(self):
+    def predict(self, X, device=None):
         """
-        Define the model's computation graph.
-
-        Returns
-        -------
-        nn.Module
-
+        The `_predict` function of the base class handles all the
+        details around data formatting. In this case, the
+        raw output of `self.model`, as given by
+        `TorchLinearRegressionModel.forward` is all we need.
         """
-        return TorchDeepNeuralEmbeddingModel(self.vocab_size, self.output_size,
-                                    self.num_inputs, self.device, self.hidden_activation,
-                                    self.num_layers, self.embed_dim, self.hidden_dim,
-                                    self.embedding, self.freeze_embedding)
+        return self._predict(X, device=device).cpu().numpy()
+
+    def score(self, X, y):
+        """
+        Follow sklearn in using `r2_score` as the default scorer.
+        """
+        preds = np.round(self.predict(X))
+        return r2_score(y, preds)

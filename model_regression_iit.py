@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.utils.data
-from model_classifier import TorchDeepNeuralEmbeddingClassifier
+from model_regression import TorchLinearEmbeddingRegression
 
 __author__ = "Atticus Geiger"
 __version__ = "CS224u, Stanford, Spring 2022"
@@ -87,19 +87,19 @@ class IITModel(torch.nn.Module):
         return self.activation[f'{get["layer"]}-{get["start"]}-{get["end"]}']
 
 
-class CrossEntropyLossIIT(nn.Module):
+class MSELossIIT(nn.Module):
     def __init__(self):
         super().__init__()
-        self.loss = nn.CrossEntropyLoss(reduction="mean")
+        self.loss = nn.MSELoss(reduction="mean")
 
     def forward(self, preds, labels):
         return self.loss(preds[0], labels[: , 0]) + self.loss(preds[1], labels[:,1])
 
 
-class TorchDeepNeuralClassifierIIT(TorchDeepNeuralEmbeddingClassifier):
+class TorchLinearEmbeddingRegressionIIT(TorchLinearEmbeddingRegression):
     def __init__(self, id_to_coords=None, **base_kwargs):
         super().__init__(**base_kwargs)
-        self.loss = CrossEntropyLossIIT()
+        self.loss = MSELossIIT()
         self.id_to_coords = id_to_coords
         self.shuffle_train = False
 
@@ -140,6 +140,7 @@ class TorchDeepNeuralClassifierIIT(TorchDeepNeuralEmbeddingClassifier):
         if base_y is None:
             return torch.stack([base, coord_ids.unsqueeze(1).expand(-1, base.shape[1])] + sources, dim=1)
 
+        '''
         base_y = np.array(base_y)
         self.classes_ = sorted(set(base_y).union(IIT_y))
         self.n_classes_ = len(self.classes_)
@@ -151,6 +152,10 @@ class TorchDeepNeuralClassifierIIT(TorchDeepNeuralEmbeddingClassifier):
         #IIT_y = [class2index[int(label)] for label in IIT_y]
         IIT_y = [class2index[label] for label in IIT_y]
         IIT_y = torch.tensor(IIT_y)
+        '''
+
+        base_y = torch.FloatTensor(base_y)
+        IIT_y = torch.FloatTensor(IIT_y)
 
         bigX = torch.stack([base, coord_ids.unsqueeze(1).expand(-1, base.shape[1])] + sources, dim=1)
         bigy = torch.stack((IIT_y, base_y), dim=1)
@@ -165,9 +170,7 @@ class TorchDeepNeuralClassifierIIT(TorchDeepNeuralEmbeddingClassifier):
         #IIT_test = self.prep_input(base, sources, coord_ids)
         IIT_test = self.build_dataset(base, sources, coord_ids)
         IIT_preds, base_preds = self.model(IIT_test)
-        IIT_preds = np.array(IIT_preds.argmax(axis=1).cpu())
-        base_preds = np.array(base_preds.argmax(axis=1).cpu())
-        return IIT_preds, base_preds
+        return torch.round(IIT_preds), torch.round(base_preds)
 
 
 if __name__ == '__main__':
@@ -190,7 +193,7 @@ if __name__ == '__main__':
 
     X_base_train, X_sources_train, y_base_train, y_IIT_train, interventions = iit_equality_dataset
 
-    model = TorchDeepNeuralClassifierIIT(
+    model = TorchLinearEmbeddingRegressionIIT(
         hidden_dim=embedding_dim*4,
         hidden_activation=torch.nn.ReLU(),
         num_layers=3,
