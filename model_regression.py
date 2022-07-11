@@ -1,10 +1,13 @@
 import torch
 import torch.nn as nn
+import numpy as np
+import pandas as pd
 from model_classifier import ActivationLayer
+from sklearn.metrics import r2_score
 
 from torch_model_base import TorchModelBase
 
-class TorchLinearRegressionModel(nn.Module):
+class TorchLinearEmbeddingRegressionModel(nn.Module):
     def __init__(self, 
                 vocab_size,
                 num_inputs,
@@ -50,9 +53,7 @@ class TorchLinearRegressionModel(nn.Module):
         self.model = nn.Sequential(*self.layers)
 
     def forward(self, X):
-        X = torch.tensor(X).to(self.device).long()
         X = self.embedding(X)
-
         new_x = []
         for x in X:
             new_x.append(torch.cat(tuple(x[i]
@@ -80,22 +81,54 @@ class TorchLinearRegressionModel(nn.Module):
             return embedding
 
 
-class TorchLinearRegression(TorchModelBase):
-    def __init__(self, **base_kwargs):
+class TorchLinearEmbedingRegression(TorchModelBase):
+    def __init__(self, 
+                 vocab,
+                 num_inputs,
+                 hidden_activation=nn.Tanh(),
+                 num_layers=1,
+                 hidden_dim=50,
+                 embed_dim=40,
+                 embedding=None,
+                 freeze_embedding=False,
+                 **base_kwargs):
+
         super().__init__(**base_kwargs)
+        self.num_layers = num_layers
+        self.vocab = vocab
+        self.vocab_size = len(self.vocab)
+        self.embed_dim = embed_dim
+        self.num_inputs = num_inputs
+        self.hidden_activation = hidden_activation
+        self.hidden_dim = hidden_dim
+
         self.loss = nn.MSELoss(reduction="mean")
+        self.embedding = embedding
+        self.freeze_embedding = freeze_embedding
 
     def build_graph(self):
-        return TorchLinearRegressionModel(self.input_dim)
+        return TorchLinearEmbeddingRegressionModel(self.vocab_size, self.num_inputs, 
+                                        self.device, self.hidden_activation,
+                                        self.num_layers, self.embed_dim, self.hidden_dim,
+                                        self.embedding, self.freeze_embedding)
 
     def build_dataset(self, X, y=None):
         """
         This function will be used in training (when there is a `y`)
         and in prediction (no `y`). For both cases, we rely on a
         `TensorDataset`.
-        """
+
         X = torch.FloatTensor(X)
         self.input_dim = X.shape[1]
+        """
+        new_X = []
+        index = dict(zip(self.vocab, range(self.vocab_size)))
+        for ex in X:
+            seq = [index[w] for w in ex]
+            seq = torch.tensor(seq)
+            new_X.append(seq)
+        X = torch.stack(new_X)
+        
         if y is None:
             dataset = torch.utils.data.TensorDataset(X)
         else:
