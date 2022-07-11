@@ -69,7 +69,7 @@ class TorchDeepNeuralModel(nn.Module):
         self.model = nn.Sequential(*self.layers)
 
     def forward(self, X):
-        print(X.dtype)
+        X = torch.Tensor(X).to(self.device).long()
         X = self.embedding(X)
         new_x = []
         for x in X:

@@ -117,7 +117,7 @@ class TorchDeepNeuralClassifierIIT(TorchDeepNeuralClassifier):
             output.append([batch_index*self.batch_size + x for x in range(self.batch_size)])
         return output
 
-    def build_dataset(self, base, sources, base_y, IIT_y, coord_ids):
+    def build_dataset(self, base, sources, coord_ids, base_y=None, IIT_y=None):
         new_base = []
         index_base = dict(zip(self.vocab, range(self.vocab_size)))
         for ex in base:
@@ -139,6 +139,9 @@ class TorchDeepNeuralClassifierIIT(TorchDeepNeuralClassifier):
         self.input_dim = base.shape[1]
         coord_ids = torch.LongTensor(np.array(coord_ids))
         #---------------------------------------------------
+
+        if base_y is None:
+            return torch.stack([base, coord_ids.unsqueeze(1).expand(-1, base.shape[1])] + sources, dim=1)
 
         base_y = np.array(base_y)
         self.classes_ = sorted(set(base_y).union(IIT_y))
@@ -162,7 +165,8 @@ class TorchDeepNeuralClassifierIIT(TorchDeepNeuralClassifier):
         return bigX
 
     def iit_predict(self, base, sources, coord_ids):
-        IIT_test = self.prep_input(base, sources, coord_ids)
+        #IIT_test = self.prep_input(base, sources, coord_ids)
+        IIT_test = self.build_dataset(base, sources, coord_ids)
         IIT_preds, base_preds = self.model(IIT_test)
         IIT_preds = np.array(IIT_preds.argmax(axis=1).cpu())
         base_preds = np.array(base_preds.argmax(axis=1).cpu())
