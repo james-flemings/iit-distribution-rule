@@ -117,7 +117,7 @@ class TorchLinearEmbeddingRegressionIIT(TorchLinearEmbeddingRegression):
             output.append([batch_index*self.batch_size + x for x in range(self.batch_size)])
         return output
 
-    def build_dataset(self, base, sources, coord_ids, base_y=None, IIT_y=None):
+    def build_dataset(self, base, sources, base_y, IIT_y, coord_ids):
         new_base = []
         index_base = dict(zip(self.vocab, range(self.vocab_size)))
         for ex in base:
@@ -140,20 +140,6 @@ class TorchLinearEmbeddingRegressionIIT(TorchLinearEmbeddingRegression):
         if base_y is None:
             return torch.stack([base, coord_ids.unsqueeze(1).expand(-1, base.shape[1])] + sources, dim=1)
 
-        '''
-        base_y = np.array(base_y)
-        self.classes_ = sorted(set(base_y).union(IIT_y))
-        self.n_classes_ = len(self.classes_)
-        class2index = dict(zip(self.classes_, range(self.n_classes_)))
-        base_y = [class2index[label] for label in base_y]
-        base_y = torch.tensor(base_y)
-
-        IIT_y = np.array(IIT_y)
-        #IIT_y = [class2index[int(label)] for label in IIT_y]
-        IIT_y = [class2index[label] for label in IIT_y]
-        IIT_y = torch.tensor(IIT_y)
-        '''
-
         base_y = torch.FloatTensor(base_y)
         IIT_y = torch.FloatTensor(IIT_y)
 
@@ -168,7 +154,7 @@ class TorchLinearEmbeddingRegressionIIT(TorchLinearEmbeddingRegression):
 
     def iit_predict(self, base, sources, coord_ids):
         #IIT_test = self.prep_input(base, sources, coord_ids)
-        IIT_test = self.build_dataset(base, sources, coord_ids)
+        IIT_test = self.build_dataset(base, sources, None, None, coord_ids)
         IIT_preds, base_preds = self.model(IIT_test)
         return torch.round(IIT_preds), torch.round(base_preds)
 

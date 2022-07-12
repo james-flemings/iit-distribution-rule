@@ -28,7 +28,7 @@ def generate_data(vals: list[str], train_test_split:float = 0.9):
     return tokens[:split], outputs[:split], tokens[split:], outputs[split:]
 
 
-def get_iit_distribution_dataset_both(variable: int, vals: list[str], train_test_split: float = 0.9):
+def get_iit_distribution_dataset_both(variable: int, vals: list[str], train_test_split: float = 0.9, first: bool = False):
     x_base_train, y_base_train, x_base_test, y_base_test = generate_data(vals, train_test_split)
 
     x_source_train = copy.deepcopy(x_base_train)
@@ -37,13 +37,13 @@ def get_iit_distribution_dataset_both(variable: int, vals: list[str], train_test
     shuffle(x_source_train)
     shuffle(x_source_test)
 
-    y_source_train = get_iit_label(variable, vals, x_base_train, x_source_train)
-    y_source_test = get_iit_label(variable, vals, x_base_test, x_source_test)
+    y_source_train = get_iit_label(variable, vals, x_base_train, x_source_train, first)
+    y_source_test = get_iit_label(variable, vals, x_base_test, x_source_test, first)
 
     return (x_base_train, y_base_train, x_source_train, y_source_train), (x_base_test, y_base_test, x_source_test, y_source_test)
 
 
-def get_iit_label(variable: int, vals: list[str], x_base: list[list[str]], x_source: list[list[str]]):
+def get_iit_label(variable: int, vals: list[str], x_base: list[list[str]], x_source: list[list[str]], first: bool):
     y_iit = []
     for base, source in zip(x_base, x_source):
         a = vals.index(source[0])
@@ -53,10 +53,14 @@ def get_iit_label(variable: int, vals: list[str], x_base: list[list[str]], x_sou
         y = vals.index(base[1])
         z = vals.index(base[2])
 
-        sum = x*y + a*c if variable == 2 else a*b + x*z
+        if first:
+            sum = x * (b + c)
+        else:
+            sum = x*y + a*c if variable == 2 else a*b + x*z
         y_iit.append(sum)
 
     return y_iit
+
 
 
 vals = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
