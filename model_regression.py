@@ -107,10 +107,12 @@ class TorchLinearEmbeddingRegression(TorchModelBase):
         self.freeze_embedding = freeze_embedding
 
     def build_graph(self):
-        return TorchLinearEmbeddingRegressionModel(self.vocab_size, self.num_inputs, 
+        self.model = TorchLinearEmbeddingRegressionModel(self.vocab_size, self.num_inputs, 
                                         self.device, self.hidden_activation,
                                         self.num_layers, self.embed_dim, self.hidden_dim,
                                         self.embedding, self.freeze_embedding)
+        self.layers = self.model.layers
+        return self.model
 
     def build_dataset(self, X, y=None):
         """
