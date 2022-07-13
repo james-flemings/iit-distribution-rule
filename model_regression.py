@@ -50,6 +50,7 @@ class TorchLinearEmbeddingRegressionModel(nn.Module):
 
         self.w = nn.Parameter(torch.zeros(self.hidden_dim))
         self.b = nn.Parameter(torch.zeros(1))
+        self.layers += [nn.Linear(self.hidden_dim, 1)]
         self.model = nn.Sequential(*self.layers)
 
     def forward(self, X):
@@ -61,7 +62,8 @@ class TorchLinearEmbeddingRegressionModel(nn.Module):
         new_x = torch.stack(new_x)
 
         h = self.model(new_x)
-        return h.matmul(self.w) + self.b
+        return h.squeeze(1)
+        #return h.matmul(self.w) + self.b
 
     @staticmethod
     def _define_embedding(embedding, vocab_size, embed_dim, freeze_embedding):
