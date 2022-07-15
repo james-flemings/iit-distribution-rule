@@ -7,6 +7,15 @@ from sklearn.metrics import r2_score
 
 from torch_model_base import TorchModelBase
 
+class SimpleLinearLayer(torch.nn.Module):
+    def __init__(self, input_dim):
+        super().__init__()
+        self.w = nn.Parameter(torch.zeros(input_dim))
+        self.b = nn.Parameter(torch.zeros(1))
+
+    def forward(self, x):
+        return x.matmul(self.w) + self.b
+
 class TorchLinearEmbeddingRegressionModel(nn.Module):
     def __init__(self, 
                 vocab_size,
@@ -47,7 +56,7 @@ class TorchLinearEmbeddingRegressionModel(nn.Module):
                     self.hidden_dim, self.hidden_dim, self.device, self.hidden_activation
                 )
             ]
-
+        #self.layers += [SimpleLinearLayer(self.hidden_dim)]
         self.layers += [nn.Linear(self.hidden_dim, 1)]
         self.model = nn.Sequential(*self.layers)
 
@@ -60,7 +69,9 @@ class TorchLinearEmbeddingRegressionModel(nn.Module):
         new_x = torch.stack(new_x)
 
         output = self.model(new_x)
-        return output.squeeze(1)
+        output = output.squeeze(1)
+        #return output.matmul(self.w) + self.b
+        return output
 
     @staticmethod
     def _define_embedding(embedding, vocab_size, embed_dim, freeze_embedding):
